@@ -1,6 +1,7 @@
-<!doctype html> 
-<html lang="en"> 
-<head> 
+<!doctype html>
+<html lang="en">
+
+<head>
     <meta charset="UTF-8" />
     <title>Making your first Phaser 3 Game - Part 1</title>
     <script src="//cdn.jsdelivr.net/npm/phaser@3.11.0/dist/phaser.js"></script>
@@ -10,136 +11,166 @@
         }
     </style>
 </head>
+
 <body>
 
-<script type="text/javascript">
+    <script type="text/javascript">
 
-    var config = {
-        type: Phaser.AUTO,
-        width: 800,
-        height: 600,
-        //arcade is one of the included physics models
-        //impact and matter.js are the other defaults
-        physics: {
-            default: 'arcade',
-            arcade: {
-                gravity: { y: 300 },
-                debug: false
+        var config = {
+            type: Phaser.AUTO,
+            width: 800,
+            height: 600,
+            //arcade is one of the included physics models
+            //impact and matter.js are the other defaults
+            physics: {
+                default: 'arcade',
+                arcade: {
+                    gravity: { y: 300 },
+                    debug: false
+                }
+            },
+            scene: {
+                preload: preload,
+                create: create,
+                update: update
             }
-        },
-        scene: {
-            preload: preload,
-            create: create,
-            update: update
+        };
+
+        var player;
+        var stars;
+        var platforms;
+        var cursors;
+
+        var game = new Phaser.Game(config);
+
+        function preload() {
+            this.load.image('sky', 'assets/sky.png');
+            this.load.image('ground', 'assets/platform.png');
+            this.load.image('star', 'assets/star.png');
+            this.load.image('bomb', 'assets/bomb.png');
+            //note the spritesheet is a collection of image FRAMES for animation
+            this.load.spritesheet('dude', 'assets/dude.png', { frameWidth: 32, frameHeight: 48 });
         }
-    };
 
-    var game = new Phaser.Game(config);
+        function create() {
+            //brings in asset drawing centered on the 800 by 600 viewport
+            this.add.image(400, 300, 'sky');
+            //brings the same asset but resetting drawing origin to top-left
+            //this.add.image(0, 0, 'sky').setOrigin(0, 0);
 
-    function preload ()
-    {
-        this.load.image('sky', 'assets/sky.png');
-        this.load.image('ground', 'assets/platform.png');
-        this.load.image('star', 'assets/star.png');
-        this.load.image('bomb', 'assets/bomb.png');
-        //note the spritesheet is a collection of image FRAMES for animation
-        this.load.spritesheet('dude', 'assets/dude.png',{ frameWidth: 32, frameHeight: 48 });
-    }
+            //this creates a Static Physics Group (as opposed to a DYNAMIC physics group)
+            //STATIC bodies have POSITION and SIZE, DYNAMIC bodies can move around via forces
+            //creating them as a GROUP allows children to have the same physics
+            platforms = this.physics.add.staticGroup();
 
-    function create ()
-    {
-        //brings in asset drawing centered on the 800 by 600 viewport
-        this.add.image(400, 300, 'sky');
-        //brings the same asset but resetting drawing origin to top-left
-        //this.add.image(0, 0, 'sky').setOrigin(0, 0);
-
-        //this creates a Static Physics Group (as opposed to a DYNAMIC physics group)
-        //STATIC bodies have POSITION and SIZE, DYNAMIC bodies can move around via forces
-        //creating them as a GROUP allows children to have the same physics
-        platforms = this.physics.add.staticGroup();
-
-        //the ground image imported is a green rectangle 400x32
-        //set scale doubles the size to 800x64
-        platforms.create(400, 568, 'ground').setScale(2).refreshBody();
-        //all of these are the same object just arranged in different area
-        platforms.create(600, 400, 'ground');
-        platforms.create(50, 250, 'ground');
-        platforms.create(750, 200, 'ground');
+            //the ground image imported is a green rectangle 400x32
+            //set scale doubles the size to 800x64
+            platforms.create(400, 568, 'ground').setScale(2).refreshBody();
+            //all of these are the same object just arranged in different area
+            platforms.create(600, 400, 'ground');
+            platforms.create(50, 250, 'ground');
+            platforms.create(750, 200, 'ground');
 
 
-        //create our sprite with Physics Game Object Factory which creates a Dynamic body by default
-        player = this.physics.add.sprite(100, 450, 'dude');
-        //bounce value sets a slight rebound after jumping
-        player.setBounce(0.2);
-        //sprite collides with world boundaries, in this case our 800x600 viewport boundaries
-        player.setCollideWorldBounds(true);
-        //every sprite has a "body" property which we can enact physics upon
-        player.body.setGravityY(300);//simulates gravity on the Y axis, higher value = higher gravity
-        //create animations the sprite can 
-        
-        //left uses spritesheet positions 0, 1, 2, and 3 for left animation
-        //so a spritesheet is similar to an array, where each index contains the frame
-        //image and can be called by it's position in the spritesheet
-        this.anims.create({
-            key: 'left',
-            frames: this.anims.generateFrameNumbers('dude',{ start: 0, end: 3 }),
+            //create our sprite with Physics Game Object Factory which creates a Dynamic body by default
+            player = this.physics.add.sprite(100, 450, 'dude');
+            //bounce value sets a slight rebound after jumping
+            player.setBounce(0.2);
+            //sprite collides with world boundaries, in this case our 800x600 viewport boundaries
+            player.setCollideWorldBounds(true);
+            //every sprite has a "body" property which we can enact physics upon
+            player.body.setGravityY(300);//simulates gravity on the Y axis, higher value = higher gravity
+            //create animations the sprite can 
+
+            //left uses spritesheet positions 0, 1, 2, and 3 for left animation
+            //so a spritesheet is similar to an array, where each index contains the frame
+            //image and can be called by it's position in the spritesheet
+            this.anims.create({
+                key: 'left',
+                frames: this.anims.generateFrameNumbers('dude', { start: 0, end: 3 }),
                 //sets rate to 10fps
                 frameRate: 10,
                 //-1 value tells animation to loop
                 repeat: -1
-        });
+            });
 
-        //turn uses position 4 in the spritesheet, which faces the camera/player
-        this.anims.create({
-            key: 'turn',
-            frames: [{ key: 'dude', frame: 4 }],
-            frameRate: 20
-        });
+            //turn uses position 4 in the spritesheet, which faces the camera/player
+            this.anims.create({
+                key: 'turn',
+                frames: [{ key: 'dude', frame: 4 }],
+                frameRate: 20
+            });
 
-        //right uses frames 5, 6, 7 and 8
-        this.anims.create({
-            key: 'right',
-            frames: this.anims.generateFrameNumbers('dude',{ start: 5, end: 8 }),
+            //right uses frames 5, 6, 7 and 8
+            this.anims.create({
+                key: 'right',
+                frames: this.anims.generateFrameNumbers('dude', { start: 5, end: 8 }),
                 frameRate: 10,
                 repeat: -1
-        })
-        //this.add.image(400, 300, 'star');
+            })
+            //this.add.image(400, 300, 'star');
 
-        //to allow collisions between player and static objects we create a Collider object
-        //very simply we use the player and platforms variables as our collider arguments
-        //this collider is where the magic happens, it will test for collision between all group members
-        this.physics.add.collider(player, platforms);
 
-        //CONTROLS - no need to add event listeners! Phaser has a built-in Keyboard manager
-        cursors = this.input.keyboard.createCursorKeys();
-        //createCursorKeys() populates the cursors variable with the four properties up, down, left, right
-        //each of these directions is an instance of a key object
-    }
+            //CONTROLS - no need to add event listeners! Phaser has a built-in Keyboard manager
+            cursors = this.input.keyboard.createCursorKeys();
+            //createCursorKeys() populates the cursors variable with the four properties up, down, left, right
+            //each of these directions is an instance of a key object
 
-    function update ()
-    {
-        //poll the cursors object in the update function
-        if (cursors.left.isDown){ //sprite will only move when key is down
-            //set velocity to left with a negative X axis
-            player.setVelocityX(-260);
-            player.anims.play('left', true);
-        }
-        else if (cursors.right.isDown){
-            //set velocity to left with a positive X axis
-            player.setVelocityX(260);
-            player.anims.play('right', true);
-        }
-        else {
-            player.setVelocityX(0);
-            player.anims.play('turn');
-        }
-        //check that up key is depressed AND player is touching ground
-        if (cursors.up.isDown && player.body.touching.down){
-            player.setVelocityY(-500);
-        }
-    }
+            //now we'll add a "stars" group with Dynamic physics
+            stars = this.physics.add.group({
+                key: "star",
+                //repeating this 11 times yields 12 stars
+                repeat: 11,
+                //place at starting point then each child "steps" on the X axis
+                //so first start is placed at 12, then 82, then 152, etc.
+                setXY: { x: 12, y: 0, stepX: 70 }
+            });
+            //randomize a bounce between .4 and .8
+            stars.children.iterate(function (child) {
+                child.setBounceY(Phaser.Math.FloatBetween(0.4, 0.8));
+            });
 
-</script>
+            //to allow collisions between player and static objects we create a Collider object
+            //very simply we use the player and platforms variables as our collider arguments
+            //this collider is where the magic happens, it will test for collision between all group members
+            this.physics.add.collider(player, platforms);
+            //we need to add a collider for the stars now so they don't fall through the "ground"
+            this.physics.add.collider(stars, platforms);
+            //also check if a player overlaps with a star:
+            this.physics.add.overlap(player, stars, collectStar, null, this);
+
+        }
+
+        function update() {
+            //poll the cursors object in the update function
+            if (cursors.left.isDown) { //sprite will only move when key is down
+                //set velocity to left with a negative X axis
+                player.setVelocityX(-260);
+                player.anims.play('left', true);
+            }
+            else if (cursors.right.isDown) {
+                //set velocity to left with a positive X axis
+                player.setVelocityX(260);
+                player.anims.play('right', true);
+            }
+            else {
+                player.setVelocityX(0);
+                player.anims.play('turn');
+            }
+            //check that up key is depressed AND player is touching ground
+            if (cursors.up.isDown && player.body.touching.down) {
+                player.setVelocityY(-500);
+            }
+        }
+
+        //if player overlaps, collectStar is invoked
+        //function will disable the physics body of the object, removing it from display
+        function collectStar(player, star) {
+            star.disableBody(true, true);
+        }
+
+    </script>
 
 </body>
+
 </html>
