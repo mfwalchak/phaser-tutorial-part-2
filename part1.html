@@ -36,10 +36,16 @@
             }
         };
 
+        //declare variables for game sprites
         var player;
         var stars;
         var platforms;
         var cursors;
+        //var bombs;
+        //add a scoring mechanism, start by declaring the text variables
+        var score = 0;
+        var scoreText;
+        var gameOverText;
 
         var game = new Phaser.Game(config);
 
@@ -81,6 +87,13 @@
             //every sprite has a "body" property which we can enact physics upon
             player.body.setGravityY(300);//simulates gravity on the Y axis, higher value = higher gravity
             //create animations the sprite can 
+
+            //add bombs to create enemies
+            bombs = this.physics.add.group();
+            //add collider between bombs and platforms
+            this.physics.add.collider(bombs, platforms);
+            //add collider between player and bombs
+            this.physics.add.collider(player, bombs, hitBomb, null, this);
 
             //left uses spritesheet positions 0, 1, 2, and 3 for left animation
             //so a spritesheet is similar to an array, where each index contains the frame
@@ -138,8 +151,13 @@
             this.physics.add.collider(stars, platforms);
             //also check if a player overlaps with a star:
             this.physics.add.overlap(player, stars, collectStar, null, this);
-
+            //add definition to the score text - 16x16 is position, default text is 0, define font size and fill but leave font default
+            scoreText = this.add.text(16, 16, 'score: 0', { fontSize: '32px', fill: '#000'});
+            this.gameOverText = this.add.text(400, 300, 'Game Over Dude!', { fontSize: '72px', fill: '#000'})
+            this.gameOverText.setOrigin(.5);
+            this.gameOverText.visible = false;
         }
+
 
         function update() {
             //poll the cursors object in the update function
@@ -157,17 +175,46 @@
                 player.setVelocityX(0);
                 player.anims.play('turn');
             }
-            //check that up key is depressed AND player is touching ground
+            //check that up key is depressed AND player is touching ground5
             if (cursors.up.isDown && player.body.touching.down) {
                 player.setVelocityY(-500);
             }
         }
 
+        //if player collider is activated call hitbomb function
+        //hitbomb stops the game (physics.pause()) and turns the player red (setTint)
+        function hitBomb(player, bomb){
+                this.physics.pause();
+                player.setTint(0xff0000);
+                player.anims.play('turn');
+                gameOver = true;
+                this.gameOverText.visible = true;
+            }
+
         //if player overlaps, collectStar is invoked
         //function will disable the physics body of the object, removing it from display
         function collectStar(player, star) {
             star.disableBody(true, true);
+            //add score functionality to start collider, set score to current score + 10
+            score += 10;
+            scoreText.setText('Score: ' + score);
+
+            //add a bomb spawn if all stars are collected
+            if (stars.countActive(true) === 0){
+                stars.children.iterate(function (child){
+                    child.enableBody(true, child.x, 0, true, true);
+                });
+
+                var x = (player.x < 400) ? Phaser.Math.Between(400, 800) : Phaser.Math.Between(0, 400);
+
+                var bomb = bombs.create(x, 16, 'bomb');
+                bomb.setBounce(1);
+                bomb.setCollideWorldBounds(true);
+
+                bomb.setVelocity(Phaser.Math.Between(-200, 200), 20);
+            }
         }
+
 
     </script>
 
